@@ -1492,6 +1492,7 @@ function normalizeRecapPeriodLinks(raw, fallbackPeriods) {
 }
 
 let activeClipStreamKey = '';
+let goalListSelectedCategory = null;
 const clipBankFilters = { text: '', tag: '', person: '' };
 let activeClipStreamBucket = 'future';
 const N3ON_PLATFORM_PHOTO = '/Users/duboisca/Library/Application Support/Cursor/User/workspaceStorage/823ad0b4ad46fd4afca3babf3b69f29f/images/521171641_18052259966616300_5868433034743007662_n-13c6f153-e7ef-4d07-b89b-527e6d61cc92.png';
@@ -1681,11 +1682,13 @@ function renderClippersBoard() {
   if (!availableBuckets.includes(activeClipStreamBucket)) activeClipStreamBucket = 'future';
   let visibleStreams = groupedStreams[activeClipStreamBucket] || [];
   const visibleKeys = new Set(visibleStreams.map((s) => getClipStreamKey(s)));
-  if (!visibleKeys.has(activeClipStreamKey) && visibleStreams.length > 0) {
-    activeClipStreamKey = getClipStreamKey(visibleStreams[0]);
-  }
+  if (!visibleKeys.has(activeClipStreamKey)) activeClipStreamKey = '';
   const activeStream = visibleStreams.find((s) => getClipStreamKey(s) === activeClipStreamKey) || null;
   const activeSegments = activeStream && Array.isArray(activeStream.segments) ? activeStream.segments : [];
+  const showClippersDetailOnly = Boolean(activeStream) && isMobileDetailDockLayout();
+  const clippersBackBtn = showClippersDetailOnly
+    ? `<button type="button" class="btn btn-outline btn-sm mobile-detail-back-btn" onclick="document.getElementById('tab-media')?.classList.remove('clippers-mgmt-detail-open')"><i class="fa-solid fa-arrow-left"></i> Back to list</button>`
+    : '';
 
   board.innerHTML = `
     <div class="campaigns-layout clippers-mgmt-layout">
@@ -1712,10 +1715,11 @@ function renderClippersBoard() {
           }
         </div>
       </div>
-      <div class="glass-panel detail-panel" style="padding: 16px; min-width: 0;">
+      <div class="glass-panel detail-panel clippers-mgmt-detail-panel" style="padding: 16px; min-width: 0;">
         ${
           activeStream
             ? `
+              ${clippersBackBtn}
               <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:12px;">
                 <h4 style="margin:0; font-size:1rem;">${escAttr(activeStream.title)}</h4>
                 ${activeStream.parentArc ? `<span style="color:var(--text-muted); font-size:0.82rem;">From arc: ${escAttr(activeStream.parentArc.title)}</span>` : ''}
@@ -1727,7 +1731,7 @@ function renderClippersBoard() {
                 <a href="${escAttr(activeStream.fullVodUrl || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="if(!(this.closest('div').querySelector('.stream-full-vod-url').value||'').trim()){event.preventDefault();return;} this.href=this.closest('div').querySelector('.stream-full-vod-url').value.trim();"><i class="fa-solid fa-up-right-from-square"></i></a>
               </div>
             `
-            : `<div style="font-size:0.9rem; color:var(--text-muted); border:1px dashed var(--border-color); border-radius:8px; padding:10px; margin-bottom:10px;">No streams in this bucket yet.</div>`
+            : `<div style="font-size:0.9rem; color:var(--text-muted); border:1px dashed var(--border-color); border-radius:8px; padding:10px; margin-bottom:10px;">Select a stream to manage full VOD, segment VODs, and posted clips.</div>`
         }
         <div style="display:flex; flex-direction:column; gap:10px; min-width:0;">
           ${activeSegments
@@ -1784,6 +1788,11 @@ function renderClippersBoard() {
       </div>
     </div>
   `;
+  const mediaTab = document.getElementById('tab-media');
+  if (mediaTab) {
+    if (showClippersDetailOnly) mediaTab.classList.add('clippers-mgmt-detail-open');
+    else mediaTab.classList.remove('clippers-mgmt-detail-open');
+  }
 
   const entries = getClipBankEntries(streams);
   const allTags = [...new Set(entries.flatMap((e) => e.tags))].sort((a, b) => a.localeCompare(b));
@@ -2227,8 +2236,16 @@ function setupNavigation() {
                     renderArcs();
                 } else if (tabId === 'media') {
                     assetListSelectedKey = null;
+                    activeClipStreamKey = '';
+                    const mediaTab = document.getElementById('tab-media');
+                    if (mediaTab) mediaTab.classList.remove('clippers-mgmt-detail-open');
                     hideDetailPanel('asset-detail', '#media-pane-social .campaign-detail-col');
                     renderAssets();
+                    renderClippersBoard();
+                } else if (tabId === 'goals') {
+                    goalListSelectedCategory = null;
+                    hideDetailPanel('goal-detail', '#tab-goals .campaign-detail-col');
+                    renderGoals();
                 }
                 if (tabId === 'streams') scheduleDetailDockRetry(syncStreamDetailDock);
                 else if (tabId === 'arcs') scheduleDetailDockRetry(syncArcDetailDock);
@@ -2639,10 +2656,12 @@ function isMobileCardDetailModeForList(listId) {
 }
 
 function clearMobileCardDetailScreens() {
-    ['tab-streams', 'tab-arcs', 'tab-media'].forEach((id) => {
+    ['tab-streams', 'tab-arcs', 'tab-media', 'tab-goals'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('mobile-card-detail-open');
     });
+    const mediaTab = document.getElementById('tab-media');
+    if (mediaTab) mediaTab.classList.remove('clippers-mgmt-detail-open');
 }
 
 function openMobileCardDetailScreen(tabId, detailId, columnSelector) {
@@ -2662,7 +2681,14 @@ function injectMobileBackButton(detailPanel, tabId) {
     if (!detailPanel) return;
     const existing = detailPanel.querySelector('.mobile-detail-back-btn');
     if (existing) existing.remove();
-    if (!isMobileCardDetailModeForList(tabId === 'tab-media' ? 'asset-list' : tabId === 'tab-streams' ? 'stream-list' : 'arc-list')) return;
+    const listIdByTab = {
+      'tab-media': 'asset-list',
+      'tab-streams': 'stream-list',
+      'tab-arcs': 'arc-list',
+      'tab-goals': 'goals-list',
+    };
+    const listId = listIdByTab[tabId] || 'arc-list';
+    if (!isMobileCardDetailModeForList(listId)) return;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-outline btn-sm mobile-detail-back-btn';
@@ -2935,6 +2961,10 @@ window.updateStreamClipField = function(streamId, parentArcId, linkedIndex, fiel
 
 window.setActiveClipManagementStream = function(streamKey) {
     activeClipStreamKey = String(streamKey || '');
+    if (activeClipStreamKey && isMobileDetailDockLayout()) {
+      const mediaTab = document.getElementById('tab-media');
+      if (mediaTab) mediaTab.classList.add('clippers-mgmt-detail-open');
+    }
     renderClippersBoard();
 };
 
@@ -2942,6 +2972,9 @@ window.setClipManagementBucket = function(bucket) {
     const next = String(bucket || '').toLowerCase();
     if (!['past', 'current', 'future'].includes(next)) return;
     activeClipStreamBucket = next;
+    activeClipStreamKey = '';
+    const mediaTab = document.getElementById('tab-media');
+    if (mediaTab) mediaTab.classList.remove('clippers-mgmt-detail-open');
     renderClippersBoard();
 };
 
@@ -3845,11 +3878,11 @@ window.renderGoals = function() {
     list.innerHTML = '';
 
     const categories = [...new Set(goalsData.map(g => g.category))];
-    let isFirst = true;
+    if (!categories.includes(goalListSelectedCategory)) goalListSelectedCategory = null;
 
     categories.forEach(category => {
         const card = document.createElement('div');
-        card.className = `arc-card ${isFirst ? 'active' : ''}`;
+        card.className = `arc-card ${goalListSelectedCategory === category ? 'active' : ''}`;
         
         const categoryGoals = goalsData.filter(g => g.category === category);
         const inProgress = categoryGoals.filter(g => g.status === 'In Progress').length;
@@ -3864,25 +3897,44 @@ window.renderGoals = function() {
         `;
         
         card.addEventListener('click', () => {
+            if (goalListSelectedCategory === category) {
+                goalListSelectedCategory = null;
+                card.classList.remove('active');
+                hideDetailPanel('goal-detail', '#tab-goals .campaign-detail-col');
+                return;
+            }
             document.querySelectorAll('#tab-goals .arc-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
+            goalListSelectedCategory = category;
             renderCategoryDetail(category);
+            if (isMobileCardDetailModeForList('goals-list')) {
+                openMobileCardDetailScreen('tab-goals', 'goal-detail', '#tab-goals .campaign-detail-col');
+            }
         });
 
         list.appendChild(card);
-        isFirst = false;
     });
 
-    if (categories.length > 0) {
-        renderCategoryDetail(categories[0]);
+    if (goalListSelectedCategory) {
+        renderCategoryDetail(goalListSelectedCategory);
     } else {
-        scheduleDetailDockRetry(syncGoalDetailDock);
+        const detailPanel = document.getElementById('goal-detail');
+        if (detailPanel) {
+            detailPanel.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-layer-group empty-icon"></i>
+                    <p>Select a category to view subgoals</p>
+                </div>
+            `;
+        }
+        hideDetailPanel('goal-detail', '#tab-goals .campaign-detail-col');
     }
 }
 
 window.renderCategoryDetail = function(category) {
     const detailPanel = document.getElementById('goal-detail');
     if (!detailPanel) return;
+    detailPanel.style.display = '';
 
     const categoryGoals = goalsData.filter(g => g.category === category);
 
@@ -3960,6 +4012,7 @@ window.renderCategoryDetail = function(category) {
 
     html += `</div>`;
     detailPanel.innerHTML = html;
+    injectMobileBackButton(detailPanel, 'tab-goals');
     scheduleDetailDockRetry(syncGoalDetailDock);
 }
 
