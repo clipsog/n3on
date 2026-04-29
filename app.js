@@ -1457,7 +1457,7 @@ function getPersonRelatedStreams(personName) {
   if (!needle) return [];
   const streams = getUnifiedStreams();
   return streams.filter((stream) => {
-    const collab = String(stream.collabWith || '').toLowerCase();
+    const collab = collabWithFieldAsSearchBlob(stream.collabWith);
     const goals = String(stream.goals || '').toLowerCase();
     const title = String(stream.title || '').toLowerCase();
     const logistics = String(stream.logistics || '').toLowerCase();
@@ -3366,7 +3366,7 @@ function renderDetail(arc, targetId, parentArc = null) {
                 <div class="info-group" style="grid-column: 1 / -1; background: rgba(255, 255, 255, 0.05);">
                     <div class="info-label"><i class="fa-solid fa-users"></i> Collab Details</div>
                     <div class="info-content">
-                        <strong>With:</strong> ${arc.collabWith}
+                        <strong>With:</strong> ${escAttr(formatCollabWithForDisplay(arc.collabWith))}
                     </div>
                 </div>
             `;
@@ -4604,8 +4604,19 @@ function handleCreateDraftSubmit(modal) {
     if (security) draft.security = security;
     if (driver) draft.driver = driver;
     if (type === 'Collab') {
-      const collabWith = getFieldValue('.field-collab-with');
-      if (collabWith) draft.collabWith = collabWith;
+      const chipNames = [...modal.querySelectorAll('.field-collab-chip')]
+        .map((el) => String(el.getAttribute('data-name') || '').trim())
+        .filter(Boolean);
+      const seen = new Set();
+      const uniq = [];
+      chipNames.forEach((n) => {
+        const k = n.toLowerCase();
+        if (seen.has(k)) return;
+        seen.add(k);
+        uniq.push(n);
+      });
+      if (uniq.length === 1) draft.collabWith = uniq[0];
+      else if (uniq.length > 1) draft.collabWith = uniq;
     }
     arcsData.push(draft);
 
@@ -4811,18 +4822,40 @@ function getCollabContactNameList() {
   return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
-function filterCollabContactNames(query, limit = 20) {
+function filterCollabContactNames(query, limit = 20, excludeLower = new Set()) {
   const q = String(query || '').trim().toLowerCase();
-  const all = getCollabContactNameList();
+  const all = getCollabContactNameList().filter((name) => !excludeLower.has(name.toLowerCase()));
   if (!q) return all.slice(0, limit);
   return all.filter((name) => name.toLowerCase().includes(q)).slice(0, limit);
 }
 
+function getCollabChipSelectedLowerSet(wrap) {
+  const set = new Set();
+  wrap.querySelectorAll('.field-collab-chip').forEach((el) => {
+    const n = String(el.getAttribute('data-name') || '').trim().toLowerCase();
+    if (n) set.add(n);
+  });
+  return set;
+}
+
+function formatCollabWithForDisplay(value) {
+  if (Array.isArray(value)) {
+    return value.map((x) => String(x).trim()).filter(Boolean).join(', ');
+  }
+  return String(value || '').trim();
+}
+
+function collabWithFieldAsSearchBlob(collabWith) {
+  if (Array.isArray(collabWith)) return collabWith.map((x) => String(x).trim()).filter(Boolean).join(' ').toLowerCase();
+  return String(collabWith || '').toLowerCase();
+}
+
 function setupCollabWithAutocomplete(modal) {
-  const input = modal?.querySelector('.field-collab-with');
-  const wrap = input?.closest('.collab-with-wrap');
+  const searchInput = modal?.querySelector('.field-collab-search');
+  const wrap = searchInput?.closest('.collab-with-wrap');
+  const chipsEl = wrap?.querySelector('.field-collab-chips');
   const listEl = wrap?.querySelector('.field-collab-suggestions');
-  if (!input || !listEl || !wrap) return;
+  if (!searchInput || !listEl || !wrap || !chipsEl) return;
 
   if (wrap._collabDocAbort) {
     wrap._collabDocAbort.abort();
@@ -4851,15 +4884,59 @@ function setupCollabWithAutocomplete(modal) {
   };
 
   const renderSuggestions = () => {
-    show(filterCollabContactNames(input.value));
+    const exclude = getCollabChipSelectedLowerSet(wrap);
+    show(filterCollabContactNames(searchInput.value, 20, exclude));
   };
 
-  input.addEventListener('input', renderSuggestions, { signal });
-  input.addEventListener('focus', renderSuggestions, { signal });
-  input.addEventListener(
+  const addChip = (rawName) => {
+    const name = String(rawName || '').trim();
+    if (!name) return;
+    const exclude = getCollabChipSelectedLowerSet(wrap);
+    if (exclude.has(name.toLowerCase())) return;
+    const chip = document.createElement('span');
+    chip.className = 'field-collab-chip';
+    chip.setAttribute('data-name', name);
+    chip.style.cssText =
+      'display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 12px;border-radius:999px;background:rgba(255,255,255,0.08);border:1px solid var(--border-color);font-size:0.88rem;line-height:1.2;';
+    chip.appendChild(document.createTextNode(name));
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'field-collab-chip-remove';
+    rm.setAttribute('aria-label', 'Remove');
+    rm.style.cssText =
+      'background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 2px;line-height:1;font-size:1.05rem;display:flex;align-items:center;';
+    rm.textContent = '×';
+    chip.appendChild(rm);
+    chipsEl.appendChild(chip);
+  };
+
+  chipsEl.addEventListener(
+    'click',
+    (e) => {
+      const rm = e.target.closest('.field-collab-chip-remove');
+      if (!rm) return;
+      const chip = rm.closest('.field-collab-chip');
+      if (chip) chip.remove();
+      renderSuggestions();
+    },
+    { signal }
+  );
+
+  searchInput.addEventListener('input', renderSuggestions, { signal });
+  searchInput.addEventListener('focus', renderSuggestions, { signal });
+  searchInput.addEventListener(
     'keydown',
     (e) => {
       if (e.key === 'Escape') hide();
+      if (e.key === 'Backspace' && !searchInput.value) {
+        const chips = chipsEl.querySelectorAll('.field-collab-chip');
+        const last = chips[chips.length - 1];
+        if (last) {
+          e.preventDefault();
+          last.remove();
+          renderSuggestions();
+        }
+      }
     },
     { signal }
   );
@@ -4875,12 +4952,14 @@ function setupCollabWithAutocomplete(modal) {
   listEl.addEventListener(
     'click',
     (e) => {
-      const btn = e.target.closest('[data-name]');
+      const btn = e.target.closest('.field-collab-suggestion-btn[data-name]');
       if (!btn) return;
       const name = btn.getAttribute('data-name') || '';
-      input.value = name;
+      addChip(name);
+      searchInput.value = '';
       hide();
-      input.focus();
+      renderSuggestions();
+      searchInput.focus();
     },
     { signal }
   );
@@ -4958,7 +5037,8 @@ function setupModal() {
         'Collab': `
             <div class="form-group collab-with-wrap" style="margin-bottom: 16px; position: relative;">
                 <label>Collab With (Network)</label>
-                <input type="text" class="form-input field-collab-with" autocomplete="off" placeholder="Type to search your contacts…" style="width: 100%; margin-top: 8px;">
+                <div class="field-collab-chips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; margin-bottom: 6px; min-height: 0;"></div>
+                <input type="text" class="form-input field-collab-search" autocomplete="off" placeholder="Search contacts, click a name to add…" style="width: 100%;">
                 <div class="field-collab-suggestions" style="display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 60; margin-top: 4px; max-height: 240px; overflow-y: auto; background: rgba(18, 18, 22, 0.98); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: 0 10px 28px rgba(0,0,0,0.45);"></div>
             </div>
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
