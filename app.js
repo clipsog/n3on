@@ -3119,16 +3119,20 @@ function renderDetail(arc, targetId, parentArc = null) {
     let html = `
         <div class="detail-header">
             ${parentArc ? `<button class="btn btn-outline btn-sm" style="margin-bottom: 16px; display: inline-flex; align-items: center; gap: 8px;" onclick="renderDetail(arcsData.find(a => a.id === '${parentArc.id}'), '${targetId}')"><i class="fa-solid fa-arrow-left"></i> Back to ${parentArc.title}</button>` : ''}
-            <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-                ${canDeleteArcInDetail ? `<button type="button" id="delete-detail-arc-btn" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.45); color:#f87171;">
+            <div class="detail-header-actions">
+                <div class="detail-header-actions-left">
+                ${canDeleteArcInDetail ? `<button type="button" id="delete-detail-arc-btn" class="btn btn-outline btn-sm detail-corner-btn detail-corner-btn--danger">
                     <i class="fa-solid fa-trash"></i> Delete Arc
                 </button>` : ''}
-                ${canDeleteInDetail ? `<button type="button" id="delete-detail-stream-btn" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.45); color:#f87171;">
+                ${canDeleteInDetail ? `<button type="button" id="delete-detail-stream-btn" class="btn btn-outline btn-sm detail-corner-btn detail-corner-btn--danger">
                     <i class="fa-solid fa-trash"></i> Delete
                 </button>` : ''}
-                <button type="button" class="btn btn-outline btn-sm detail-edit-toggle" onclick="toggleEditMode(this)">
-                <i class="fa-solid fa-pen"></i> Edit Info
-            </button>
+                </div>
+                <div class="detail-header-actions-right">
+                    <button type="button" class="btn btn-outline btn-sm detail-edit-toggle detail-corner-btn" onclick="toggleEditMode(this)">
+                        <i class="fa-solid fa-pen"></i> Edit Info
+                    </button>
+                </div>
             </div>
             <h2>${arc.title}</h2>
             <div class="detail-tags">
@@ -3139,8 +3143,12 @@ function renderDetail(arc, targetId, parentArc = null) {
             ${isStreamLike ? `
             <div style="margin-top: 12px;">
                 <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Full stream VOD</div>
-                <input class="form-input${canEditStreamFields ? ' stream-detail-managed-field' : ''}" style="width:100%;" placeholder="https://... (full stream VOD URL)" value="${escAttr(arc.fullVodUrl || '')}"
-                  ${canEditStreamFields ? `oninput="updateStreamClipField('${arc.id}', ${parentArc ? `'${parentArc.id}'` : 'null'}, ${Number.isInteger(arc.linkedIndex) ? arc.linkedIndex : -1}, 'fullVodUrl', this.value)"` : 'disabled'} />
+                <div class="stream-vod-actions-row">
+                    <input class="form-input stream-detail-full-vod${canEditStreamFields ? ' stream-detail-managed-field' : ''}" style="width:100%;" placeholder="https://... (full stream VOD URL)" value="${escAttr(arc.fullVodUrl || '')}"
+                      ${canEditStreamFields ? `oninput="updateStreamClipField('${arc.id}', ${parentArc ? `'${parentArc.id}'` : 'null'}, ${Number.isInteger(arc.linkedIndex) ? arc.linkedIndex : -1}, 'fullVodUrl', this.value)"` : 'disabled'} />
+                    <button type="button" class="btn btn-outline btn-sm" title="Play in app" onclick="void window.openMediaEmbedPreview(this.closest('.stream-vod-actions-row').querySelector('.stream-detail-full-vod').value)"><i class="fa-solid fa-play"></i></button>
+                    <a href="${escAttr(arc.fullVodUrl || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" title="Open link" onclick="const row=this.closest('.stream-vod-actions-row'); const v=(row?.querySelector('.stream-detail-full-vod')?.value||'').trim(); if(!v){event.preventDefault();return;} this.href=v;"><i class="fa-solid fa-up-right-from-square"></i></a>
+                </div>
                 <div class="stream-poster-date-grid">
                     <div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Stream poster URL</div>
@@ -3355,8 +3363,12 @@ function renderDetail(arc, targetId, parentArc = null) {
                         }
                         ${isStreamLike ? `<div style="margin-bottom: 8px;">
                           <strong>Segment VOD:</strong>
-                          <input class="form-input${canEditStreamFields ? ' stream-detail-managed-field' : ''}" style="width:100%; margin-top:6px;" placeholder="https://... (segment VOD URL)" value="${escAttr(seg.clipVodUrl || '')}"
-                            ${canEditStreamFields ? `oninput="updateSegmentClipperFields('${arc.id}', ${parentArc ? `'${parentArc.id}'` : 'null'}, ${Number.isInteger(arc.linkedIndex) ? arc.linkedIndex : -1}, ${i}, 'clipVodUrl', this.value)"` : 'disabled'} />
+                          <div class="stream-vod-actions-row" style="margin-top:6px;">
+                            <input class="form-input stream-detail-segment-vod${canEditStreamFields ? ' stream-detail-managed-field' : ''}" style="width:100%;" placeholder="https://... (segment VOD URL)" value="${escAttr(seg.clipVodUrl || '')}"
+                              ${canEditStreamFields ? `oninput="updateSegmentClipperFields('${arc.id}', ${parentArc ? `'${parentArc.id}'` : 'null'}, ${Number.isInteger(arc.linkedIndex) ? arc.linkedIndex : -1}, ${i}, 'clipVodUrl', this.value)"` : 'disabled'} />
+                            <button type="button" class="btn btn-outline btn-sm" title="Play in app" onclick="void window.openMediaEmbedPreview(this.closest('.stream-vod-actions-row').querySelector('.stream-detail-segment-vod').value)"><i class="fa-solid fa-play"></i></button>
+                            <a href="${escAttr(seg.clipVodUrl || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" title="Open link" onclick="const row=this.closest('.stream-vod-actions-row'); const v=(row?.querySelector('.stream-detail-segment-vod')?.value||'').trim(); if(!v){event.preventDefault();return;} this.href=v;"><i class="fa-solid fa-up-right-from-square"></i></a>
+                          </div>
                         </div>` : ''}
                         ${optionsHtml}
                     </div>

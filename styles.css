@@ -882,6 +882,39 @@ h1, h2, h3, h4, h5, h6 {
     border-bottom: 1px solid var(--border-color);
 }
 
+.detail-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.detail-header-actions-left,
+.detail-header-actions-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.detail-corner-btn {
+    padding: 5px 10px;
+    font-size: 0.74rem;
+    line-height: 1.1;
+}
+
+.detail-corner-btn--danger {
+    border-color: rgba(239,68,68,0.45) !important;
+    color: #f87171 !important;
+}
+
+.stream-vod-actions-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
 .detail-header h2 {
     font-size: 2rem;
     margin-bottom: 12px;
@@ -1772,6 +1805,19 @@ h1, h2, h3, h4, h5, h6 {
     .detail-grid {
         grid-template-columns: 1fr;
         gap: 16px;
+    }
+
+    .detail-header-actions {
+        margin-bottom: 8px;
+    }
+
+    .detail-corner-btn {
+        padding: 4px 8px;
+        font-size: 0.68rem;
+    }
+
+    .stream-vod-actions-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
     }
 
     .clippers-header {
