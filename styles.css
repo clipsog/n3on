@@ -1438,11 +1438,29 @@ h1, h2, h3, h4, h5, h6 {
 /* Mobile & small tablets                                                     */
 /* -------------------------------------------------------------------------- */
 @media (max-width: 900px) {
+    html {
+        overflow-x: hidden;
+        max-width: 100%;
+    }
+
+    body {
+        height: auto;
+        min-height: 100dvh;
+        max-height: none;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .app-container {
         flex-direction: column;
         height: auto;
         min-height: 100dvh;
+        max-height: none;
+        width: 100%;
+        max-width: 100%;
         overflow-x: hidden;
+        overflow-y: visible;
     }
 
     .sidebar {
@@ -1502,7 +1520,12 @@ h1, h2, h3, h4, h5, h6 {
     }
 
     .main-content {
+        flex: 1 1 auto;
         min-height: 0;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        overflow-y: visible;
     }
 
     .top-header {
@@ -1512,8 +1535,17 @@ h1, h2, h3, h4, h5, h6 {
         padding: 16px;
     }
 
+    .header-titles {
+        min-width: 0;
+    }
+
     .header-titles h1 {
         font-size: 1.35rem;
+    }
+
+    #goal-detail {
+        height: auto !important;
+        min-height: 0;
     }
 
     .header-titles p {
@@ -1533,6 +1565,12 @@ h1, h2, h3, h4, h5, h6 {
 
     .content-wrapper {
         padding: 16px 14px 24px;
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        overflow-y: visible;
+        box-sizing: border-box;
     }
 
     .campaigns-layout {
@@ -1544,22 +1582,45 @@ h1, h2, h3, h4, h5, h6 {
     #tab-streams.tab-pane.active,
     #tab-arcs.tab-pane.active,
     #tab-goals.tab-pane.active {
-        height: auto;
-        min-height: min(70dvh, 720px);
-        overflow: visible;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
 
     #tab-streams .campaigns-layout,
     #tab-arcs .campaigns-layout {
         grid-template-columns: 1fr;
-        height: auto;
-        max-height: none;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    #tab-streams .campaign-list-col,
+    #tab-streams .campaign-detail-col,
+    #tab-arcs .campaign-list-col,
+    #tab-arcs .campaign-detail-col {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    #tab-streams #stream-list,
+    #tab-arcs #arc-list {
+        flex: none !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+        overflow-x: hidden;
+        padding-right: 0;
     }
 
     #tab-streams #stream-detail,
     #tab-arcs #arc-detail {
-        height: auto;
-        min-height: 280px;
+        height: auto !important;
+        min-height: 240px;
+        overflow: visible;
     }
 
     .calendar-controls {
@@ -1572,14 +1633,66 @@ h1, h2, h3, h4, h5, h6 {
         flex-wrap: wrap;
     }
 
+    .calendar-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .current-month {
+        font-size: 1rem;
+        min-width: 0;
+        flex: 1 1 auto;
+        text-align: center;
+    }
+
     .calendar-grid {
-        grid-auto-rows: minmax(88px, auto);
-        gap: 6px;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 3px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        grid-auto-rows: minmax(72px, auto);
     }
 
     .calendar-grid-header {
-        font-size: 0.72rem;
-        padding: 0 6px 8px;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 2px;
+        font-size: 0.58rem;
+        letter-spacing: 0;
+        padding: 0 2px 6px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .calendar-grid-header > div {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .calendar-day {
+        padding: 4px 2px;
+        min-width: 0;
+        gap: 4px;
+    }
+
+    .day-number {
+        font-size: 0.62rem;
+    }
+
+    .event-badge {
+        font-size: 0.58rem;
+        padding: 2px 2px;
+        white-space: normal;
+        line-height: 1.15;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
     .modal-content {
@@ -1588,7 +1701,10 @@ h1, h2, h3, h4, h5, h6 {
     }
 
     .clip-bank-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 148px), 1fr));
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .tiktok-trend-row {
