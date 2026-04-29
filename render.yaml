@@ -12,3 +12,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: KEEP_ALIVE_ENABLED
+        value: "true"
+      - key: KEEP_ALIVE_INTERVAL_MS
+        value: "480000"

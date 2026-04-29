@@ -8,6 +8,9 @@ const PORT = Number(process.env.PORT, 10) || 3847;
 const rootDir = path.join(__dirname, '..');
 const dataDir = path.join(__dirname, 'data');
 const stateFile = path.join(dataDir, 'state.json');
+const keepAliveEnabled = String(process.env.KEEP_ALIVE_ENABLED || 'true').toLowerCase() !== 'false';
+const keepAliveIntervalMs = Math.max(60_000, Number(process.env.KEEP_ALIVE_INTERVAL_MS || 8 * 60 * 1000));
+const keepAliveUrl = String(process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL || '').trim();
 
 const usePostgres = Boolean(String(process.env.DATABASE_URL || '').trim());
 
@@ -126,4 +129,21 @@ app.use(express.static(rootDir));
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`N3ON platform: http://localhost:${PORT}/index.html`);
   console.log(usePostgres ? 'Storage: Supabase Postgres (DATABASE_URL)' : `Storage: file (${stateFile})`);
+  if (keepAliveEnabled && keepAliveUrl) {
+    const pingUrl = `${keepAliveUrl.replace(/\/$/, '')}/api/health`;
+    console.log(`Keep-alive ping enabled: ${pingUrl} every ${Math.round(keepAliveIntervalMs / 1000)}s`);
+    const runPing = async () => {
+      try {
+        await fetch(pingUrl, { method: 'GET', headers: { 'user-agent': 'n3on-keepalive' } });
+      } catch (e) {
+        console.warn('Keep-alive ping failed:', e?.message || e);
+      }
+    };
+    void runPing();
+    setInterval(() => {
+      void runPing();
+    }, keepAliveIntervalMs);
+  } else {
+    console.log('Keep-alive ping disabled (set KEEP_ALIVE_URL to enable).');
+  }
 });
