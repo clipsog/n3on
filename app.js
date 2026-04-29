@@ -2718,8 +2718,31 @@ window.setClipManagementBucket = function(bucket) {
 
 window.setClipBankFilter = function(field, value) {
     if (!Object.prototype.hasOwnProperty.call(clipBankFilters, field)) return;
+    let caret = null;
+    if (field === 'text') {
+      const active = document.activeElement;
+      if (active && active.tagName === 'INPUT') {
+        caret = {
+          start: Number(active.selectionStart ?? 0),
+          end: Number(active.selectionEnd ?? 0),
+        };
+      }
+    }
     clipBankFilters[field] = String(value || '');
     renderClippersBoard();
+    if (field === 'text') {
+      requestAnimationFrame(() => {
+        const input = document.querySelector('#clip-bank-board input.form-input');
+        if (!input) return;
+        input.focus({ preventScroll: true });
+        if (caret) {
+          const len = input.value.length;
+          const start = Math.max(0, Math.min(caret.start, len));
+          const end = Math.max(0, Math.min(caret.end, len));
+          input.setSelectionRange(start, end);
+        }
+      });
+    }
 };
 
 window.addPostedClip = function(streamId, parentArcId, linkedIndex, segmentIndex) {

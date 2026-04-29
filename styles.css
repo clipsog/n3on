@@ -1573,6 +1573,22 @@ h1, h2, h3, h4, h5, h6 {
         box-sizing: border-box;
     }
 
+    .content-wrapper > *,
+    .tab-pane.active,
+    .campaigns-layout > *,
+    .glass-panel,
+    .detail-panel,
+    .info-group {
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+
+    .tab-pane.active {
+        width: 100%;
+    }
+
     .campaigns-layout {
         grid-template-columns: 1fr;
         gap: 16px;
@@ -1653,6 +1669,7 @@ h1, h2, h3, h4, h5, h6 {
         max-width: 100%;
         box-sizing: border-box;
         grid-auto-rows: minmax(72px, auto);
+        overflow: hidden;
     }
 
     .calendar-grid-header {
@@ -1664,6 +1681,7 @@ h1, h2, h3, h4, h5, h6 {
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+        overflow: hidden;
     }
 
     .calendar-grid-header > div {
@@ -1720,6 +1738,10 @@ h1, h2, h3, h4, h5, h6 {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
+    }
+
+    .section-header > * {
+        min-width: 0;
     }
 
     .arc-timeline-filters {
