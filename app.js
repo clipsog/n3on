@@ -1230,6 +1230,43 @@ function createGoalViaForm(defaultCategory = '') {
   });
 }
 
+window.editGoalById = function(goalId) {
+  const goal = goalsData.find((g) => g.id === goalId);
+  if (!goal) return;
+  openQuickFormModal({
+    title: 'Edit Goal',
+    submitLabel: 'Save Goal',
+    fields: [
+      { name: 'title', label: 'Title', type: 'text', value: goal.title || '' },
+      { name: 'description', label: 'Description', type: 'textarea', value: goal.description || '' },
+      { name: 'actions', label: 'Action Items (one per line)', type: 'textarea', value: Array.isArray(goal.actionItems) ? goal.actionItems.join('\n') : '' },
+    ],
+    onSubmit: (values) => {
+      goal.title = String(values.title || '').trim() || goal.title;
+      goal.description = String(values.description || '').trim();
+      goal.actionItems = String(values.actions || '')
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean);
+      renderGoals();
+      if (goal.category) renderCategoryDetail(goal.category);
+      scheduleSaveAppStateToDb();
+      return true;
+    },
+  });
+};
+
+window.deleteGoalById = function(goalId) {
+  const idx = goalsData.findIndex((g) => g.id === goalId);
+  if (idx < 0) return;
+  const goal = goalsData[idx];
+  const ok = window.confirm(`Delete goal "${goal.title}"?`);
+  if (!ok) return;
+  goalsData.splice(idx, 1);
+  renderGoals();
+  scheduleSaveAppStateToDb();
+};
+
 function createNetworkPersonViaForm() {
   openQuickFormModal({
     title: 'Add Network Person',
@@ -3153,15 +3190,13 @@ function renderDetail(arc, targetId, parentArc = null) {
         <div class="detail-header">
             ${parentArc ? `<button class="btn btn-outline btn-sm" style="margin-bottom: 16px; display: inline-flex; align-items: center; gap: 8px;" onclick="renderDetail(arcsData.find(a => a.id === '${parentArc.id}'), '${targetId}')"><i class="fa-solid fa-arrow-left"></i> Back to ${parentArc.title}</button>` : ''}
             <div class="detail-header-actions">
-                <div class="detail-header-actions-left">
+                <div class="detail-header-actions-right">
                 ${canDeleteArcInDetail ? `<button type="button" id="delete-detail-arc-btn" class="btn btn-outline btn-sm detail-corner-btn detail-corner-btn--danger">
                     <i class="fa-solid fa-trash"></i> Delete Arc
                 </button>` : ''}
                 ${canDeleteInDetail ? `<button type="button" id="delete-detail-stream-btn" class="btn btn-outline btn-sm detail-corner-btn detail-corner-btn--danger">
                     <i class="fa-solid fa-trash"></i> Delete
                 </button>` : ''}
-                </div>
-                <div class="detail-header-actions-right">
                     <button type="button" class="btn btn-outline btn-sm detail-edit-toggle detail-corner-btn" onclick="toggleEditMode(this)">
                         <i class="fa-solid fa-pen"></i> Edit Info
                     </button>
@@ -3826,6 +3861,8 @@ function renderAssetDetail(asset) {
 
     let managementHtml = (asset.management || []).map(m => `<li>${m}</li>`).join('');
     let creationHtml = (asset.creation || []).map(c => `<li>${c}</li>`).join('');
+    const isXPlatform = String(asset.platform || '').toLowerCase().includes('x');
+    const showManagementBlock = String(asset.platform || '').toLowerCase() !== 'snapchat';
 
     detailPanel.innerHTML = `
         <div class="detail-header" style="display: flex; align-items: center; gap: 16px;">
@@ -3842,19 +3879,47 @@ function renderAssetDetail(asset) {
             <div class="info-group" style="grid-column: 1 / -1;">
                 <div class="info-label"><i class="fa-solid fa-bullseye"></i> Goal & Strategy</div>
                 <div class="info-content" style="font-size: 1.05rem;">
-                    <div style="margin-bottom: 12px;"><strong>Goal:</strong> ${asset.goal}</div>
-                    <div style="color: var(--text-muted);"><strong>Strategy:</strong> ${asset.strategy}</div>
+                    ${
+                      isXPlatform
+                        ? `<div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+                             <button type="button" class="btn btn-outline btn-sm x-edit-toggle"><i class="fa-solid fa-pen"></i> Edit Info</button>
+                           </div>
+                           <div class="x-readonly-view">
+                             <div style="margin-bottom: 12px;"><strong>Goal:</strong> <span class="x-goal-read">${escAttr(asset.goal || '')}</span></div>
+                             <div style="color: var(--text-muted);"><strong>Strategy:</strong> <span class="x-strategy-read">${escAttr(asset.strategy || '')}</span></div>
+                           </div>
+                           <div class="x-edit-view" style="display:none;">
+                             <div style="margin-bottom: 10px;">
+                               <div style="font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Goal</div>
+                               <textarea class="form-input x-goal-input" style="width:100%; min-height:70px; resize:vertical;">${escAttr(asset.goal || '')}</textarea>
+                             </div>
+                             <div style="margin-bottom: 10px;">
+                               <div style="font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Strategy</div>
+                               <textarea class="form-input x-strategy-input" style="width:100%; min-height:90px; resize:vertical;">${escAttr(asset.strategy || '')}</textarea>
+                             </div>
+                             <div style="display:flex; justify-content:flex-end; gap:8px;">
+                               <button type="button" class="btn btn-outline btn-sm x-cancel-btn">Cancel</button>
+                               <button type="button" class="btn btn-primary btn-sm x-save-btn"><i class="fa-solid fa-check"></i> Save</button>
+                             </div>
+                           </div>`
+                        : `<div style="margin-bottom: 12px;"><strong>Goal:</strong> ${asset.goal}</div>
+                           <div style="color: var(--text-muted);"><strong>Strategy:</strong> ${asset.strategy}</div>`
+                    }
                 </div>
             </div>
-            
-            <div class="info-group">
+
+            ${
+              showManagementBlock
+                ? `<div class="info-group">
                 <div class="info-label"><i class="fa-solid fa-users-gear"></i> Management Workflow</div>
                 <div class="info-content">
                     <ul style="padding-left: 20px; color: var(--text-muted); display: flex; flex-direction: column; gap: 8px;">
                         ${managementHtml}
                     </ul>
                 </div>
-            </div>
+            </div>`
+                : ''
+            }
 
             <div class="info-group">
                 <div class="info-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Content Creation</div>
@@ -3866,6 +3931,36 @@ function renderAssetDetail(asset) {
             </div>
         </div>
     `;
+    if (isXPlatform) {
+      const toggleBtn = detailPanel.querySelector('.x-edit-toggle');
+      const saveBtn = detailPanel.querySelector('.x-save-btn');
+      const cancelBtn = detailPanel.querySelector('.x-cancel-btn');
+      const readView = detailPanel.querySelector('.x-readonly-view');
+      const editView = detailPanel.querySelector('.x-edit-view');
+      const goalInput = detailPanel.querySelector('.x-goal-input');
+      const strategyInput = detailPanel.querySelector('.x-strategy-input');
+      const goalRead = detailPanel.querySelector('.x-goal-read');
+      const strategyRead = detailPanel.querySelector('.x-strategy-read');
+      toggleBtn?.addEventListener('click', () => {
+        if (readView) readView.style.display = 'none';
+        if (editView) editView.style.display = '';
+      });
+      cancelBtn?.addEventListener('click', () => {
+        if (goalInput) goalInput.value = String(asset.goal || '');
+        if (strategyInput) strategyInput.value = String(asset.strategy || '');
+        if (readView) readView.style.display = '';
+        if (editView) editView.style.display = 'none';
+      });
+      saveBtn?.addEventListener('click', () => {
+        asset.goal = String(goalInput?.value || '').trim();
+        asset.strategy = String(strategyInput?.value || '').trim();
+        if (goalRead) goalRead.textContent = asset.goal;
+        if (strategyRead) strategyRead.textContent = asset.strategy;
+        if (readView) readView.style.display = '';
+        if (editView) editView.style.display = 'none';
+        scheduleSaveAppStateToDb();
+      });
+    }
     injectMobileBackButton(detailPanel, 'tab-media');
     scheduleDetailDockRetry(syncAssetDetailDock);
 }
@@ -3978,10 +4073,14 @@ window.renderCategoryDetail = function(category) {
         html += `
             <div class="glass-panel" style="padding: 0; overflow: hidden; position: relative;">
                 <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(255,255,255,0.02); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'" onclick="toggleGoalAccordion('goal-body-${index}', this)">
-                    <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 12px;">
+                    <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 12px; min-width:0;">
                         <i class="fa-solid fa-chevron-right chevron-icon" style="transition: transform 0.3s; font-size: 0.9rem; color: var(--text-muted);"></i>
                         ${goal.title}
                     </h3>
+                    <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;" onclick="event.stopPropagation()">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="editGoalById('${goal.id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button type="button" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.45); color:#f87171;" onclick="deleteGoalById('${goal.id}')"><i class="fa-solid fa-trash"></i></button>
+                    </div>
                 </div>
                 <div id="goal-body-${index}" style="display: none; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
                     <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">

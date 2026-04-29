@@ -884,7 +884,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .detail-header-actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: flex-start;
     gap: 10px;
     margin-bottom: 10px;
