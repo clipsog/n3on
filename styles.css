@@ -1685,6 +1685,29 @@ h1, h2, h3, h4, h5, h6 {
         overflow: visible;
     }
 
+    .mobile-detail-back-btn {
+        margin-bottom: 12px;
+    }
+
+    #tab-streams .campaign-detail-col,
+    #tab-arcs .campaign-detail-col,
+    #tab-media #media-pane-social .campaign-detail-col {
+        display: none !important;
+    }
+
+    #tab-streams.mobile-card-detail-open .campaign-list-col,
+    #tab-arcs.mobile-card-detail-open .campaign-list-col,
+    #tab-media.mobile-card-detail-open #media-pane-social .campaign-list-col,
+    #tab-media.mobile-card-detail-open #media-subtab-selector {
+        display: none !important;
+    }
+
+    #tab-streams.mobile-card-detail-open .campaign-detail-col,
+    #tab-arcs.mobile-card-detail-open .campaign-detail-col,
+    #tab-media.mobile-card-detail-open #media-pane-social .campaign-detail-col {
+        display: block !important;
+    }
+
     .yt-recap-row {
         grid-template-columns: 1fr;
     }

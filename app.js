@@ -2171,6 +2171,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupNavigation() {
     navItems.forEach(item => {
         item.addEventListener('click', () => {
+            clearMobileCardDetailScreens();
             // Update Active State
             navItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
@@ -2186,6 +2187,19 @@ function setupNavigation() {
             });
 
             requestAnimationFrame(() => {
+                if (tabId === 'streams') {
+                    streamListSelectedKey = null;
+                    hideDetailPanel('stream-detail', '#tab-streams .campaign-detail-col');
+                    renderStreams();
+                } else if (tabId === 'arcs') {
+                    arcListSelectedId = null;
+                    hideDetailPanel('arc-detail', '#tab-arcs .campaign-detail-col');
+                    renderArcs();
+                } else if (tabId === 'media') {
+                    assetListSelectedKey = null;
+                    hideDetailPanel('asset-detail', '#media-pane-social .campaign-detail-col');
+                    renderAssets();
+                }
                 if (tabId === 'streams') scheduleDetailDockRetry(syncStreamDetailDock);
                 else if (tabId === 'arcs') scheduleDetailDockRetry(syncArcDetailDock);
                 else if (tabId === 'media') scheduleDetailDockRetry(syncAssetDetailDock);
@@ -2547,6 +2561,8 @@ function bindTikTokMediaTrendEditors(detailPanel, asset) {
 // Render Streams
 let activeStreamsBucket = 'past';
 let streamsBucketUserPinned = false;
+let streamListSelectedKey = null;
+let assetListSelectedKey = null;
 
 function syncStreamsBucketButtons() {
   ['past', 'current', 'future'].forEach((b) => {
@@ -2587,11 +2603,50 @@ function isSingleColumnCampaignLayout(list) {
     return cols.length <= 1;
 }
 
+function isMobileCardDetailModeForList(listId) {
+    const list = document.getElementById(listId);
+    return isMobileDetailDockLayout() || isSingleColumnCampaignLayout(list);
+}
+
+function clearMobileCardDetailScreens() {
+    ['tab-streams', 'tab-arcs', 'tab-media'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('mobile-card-detail-open');
+    });
+}
+
+function openMobileCardDetailScreen(tabId, detailId, columnSelector) {
+    const tab = document.getElementById(tabId);
+    if (!tab) return;
+    moveDetailPanelToColumn(detailId, columnSelector);
+    tab.classList.add('mobile-card-detail-open');
+}
+
+window.backToCardSelections = function(tabId) {
+    const tab = document.getElementById(tabId);
+    if (!tab) return;
+    tab.classList.remove('mobile-card-detail-open');
+};
+
+function injectMobileBackButton(detailPanel, tabId) {
+    if (!detailPanel) return;
+    const existing = detailPanel.querySelector('.mobile-detail-back-btn');
+    if (existing) existing.remove();
+    if (!isMobileCardDetailModeForList(tabId === 'tab-media' ? 'asset-list' : tabId === 'tab-streams' ? 'stream-list' : 'arc-list')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline btn-sm mobile-detail-back-btn';
+    btn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Back to list';
+    btn.addEventListener('click', () => window.backToCardSelections(tabId));
+    detailPanel.prepend(btn);
+}
+
 function moveDetailPanelToColumn(detailId, columnSelector) {
     const detail = document.getElementById(detailId);
     const col = document.querySelector(columnSelector);
     if (detail && col) {
         col.classList.remove('campaign-detail-col--docked-out');
+        detail.style.display = '';
         col.appendChild(detail);
     }
 }
@@ -2607,20 +2662,16 @@ function dockDetailUnderSpecificCard(listId, detailId, columnSelector, cardEl) {
     const detail = document.getElementById(detailId);
     const col = document.querySelector(columnSelector);
     if (!list || !detail) return;
-    const shouldDockInline = isMobileDetailDockLayout() || isSingleColumnCampaignLayout(list);
-    if (!shouldDockInline) {
-        if (col) col.classList.remove('campaign-detail-col--docked-out');
-        if (col) col.appendChild(detail);
-        return;
-    }
-    const active = cardEl && list.contains(cardEl) ? cardEl : list.querySelector('.arc-card.active');
-    if (active && list.contains(active)) {
-        if (col) col.classList.add('campaign-detail-col--docked-out');
-        active.insertAdjacentElement('afterend', detail);
-    } else if (col) {
-        col.classList.remove('campaign-detail-col--docked-out');
-        col.appendChild(detail);
-    }
+    if (col) col.classList.remove('campaign-detail-col--docked-out');
+    if (col) col.appendChild(detail);
+}
+
+function hideDetailPanel(detailId, columnSelector) {
+    const detail = document.getElementById(detailId);
+    const col = document.querySelector(columnSelector);
+    if (!detail) return;
+    detail.style.display = 'none';
+    if (col) col.classList.add('campaign-detail-col--docked-out');
 }
 
 function scheduleDetailDockRetry(syncFn) {
@@ -2683,9 +2734,12 @@ function renderStreams() {
         return;
     }
 
-    filtered.forEach((stream, index) => {
+    const hasSelectedStream = filtered.some((s) => getClipStreamKey(s) === streamListSelectedKey);
+
+    filtered.forEach((stream) => {
         const card = document.createElement('div');
-        card.className = `arc-card ${index === 0 ? 'active' : ''}`;
+        const streamKey = getClipStreamKey(stream);
+        card.className = `arc-card ${streamListSelectedKey === streamKey ? 'active' : ''}`;
         const displayDate = String(stream.date || 'TBD').split(' - ')[0];
         const displayLocation = String(stream.location || 'TBD').split(',')[0];
         card.innerHTML = `
@@ -2700,18 +2754,40 @@ function renderStreams() {
         `;
 
         card.addEventListener('click', () => {
+            if (card.classList.contains('active')) {
+                streamListSelectedKey = null;
+                card.classList.remove('active');
+                hideDetailPanel('stream-detail', '#tab-streams .campaign-detail-col');
+                return;
+            }
             document.querySelectorAll('#tab-streams .arc-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
+            streamListSelectedKey = streamKey;
             renderDetail(stream, 'stream-detail', stream.parentArc || null);
             scheduleDetailDockRetry(() =>
                 dockDetailUnderSpecificCard('stream-list', 'stream-detail', '#tab-streams .campaign-detail-col', card)
             );
+            if (isMobileCardDetailModeForList('stream-list')) {
+                openMobileCardDetailScreen('tab-streams', 'stream-detail', '#tab-streams .campaign-detail-col');
+            }
         });
         list.appendChild(card);
     });
 
-    if (filtered.length > 0) {
-        renderDetail(filtered[0], 'stream-detail');
+    if (hasSelectedStream) {
+        const selectedStream = filtered.find((s) => getClipStreamKey(s) === streamListSelectedKey);
+        if (selectedStream) renderDetail(selectedStream, 'stream-detail', selectedStream.parentArc || null);
+    } else {
+        const detailPanel = document.getElementById('stream-detail');
+        if (detailPanel) {
+          detailPanel.innerHTML = `
+            <div class="empty-state">
+              <i class="fa-solid fa-video empty-icon"></i>
+              <p>Select a stream to view details</p>
+            </div>
+          `;
+        }
+        hideDetailPanel('stream-detail', '#tab-streams .campaign-detail-col');
     }
     syncStreamsBucketButtons();
     scheduleDetailDockRetry(syncStreamDetailDock);
@@ -2946,10 +3022,7 @@ function renderArcs() {
         return;
     }
 
-    let activeId = arcListSelectedId;
-    if (!activeId || !arcs.some((a) => a.id === activeId)) {
-        activeId = arcs[0].id;
-    }
+    const activeId = arcs.some((a) => a.id === arcListSelectedId) ? arcListSelectedId : null;
     arcListSelectedId = activeId;
 
     arcs.forEach((arc) => {
@@ -2967,6 +3040,12 @@ function renderArcs() {
         `;
 
         card.addEventListener('click', () => {
+            if (card.classList.contains('active')) {
+                arcListSelectedId = null;
+                card.classList.remove('active');
+                hideDetailPanel('arc-detail', '#tab-arcs .campaign-detail-col');
+                return;
+            }
             arcListSelectedId = arc.id;
             document.querySelectorAll('#tab-arcs .arc-card').forEach((c) => c.classList.remove('active'));
             card.classList.add('active');
@@ -2974,18 +3053,34 @@ function renderArcs() {
             scheduleDetailDockRetry(() =>
                 dockDetailUnderSpecificCard('arc-list', 'arc-detail', '#tab-arcs .campaign-detail-col', card)
             );
+            if (isMobileCardDetailModeForList('arc-list')) {
+                openMobileCardDetailScreen('tab-arcs', 'arc-detail', '#tab-arcs .campaign-detail-col');
+            }
         });
 
         list.appendChild(card);
     });
 
-    const selected = arcs.find((a) => a.id === activeId) || arcs[0];
-    renderDetail(selected, 'arc-detail');
-    scheduleDetailDockRetry(syncArcDetailDock);
+    if (activeId) {
+        const selected = arcs.find((a) => a.id === activeId);
+        if (selected) renderDetail(selected, 'arc-detail');
+        scheduleDetailDockRetry(syncArcDetailDock);
+    } else {
+        if (detailPanel) {
+            detailPanel.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-bolt empty-icon"></i>
+                    <p>Select an arc to view details</p>
+                </div>`;
+        }
+        hideDetailPanel('arc-detail', '#tab-arcs .campaign-detail-col');
+    }
 }
 
 function renderDetail(arc, targetId, parentArc = null) {
     const detailPanel = document.getElementById(targetId);
+    if (!detailPanel) return;
+    detailPanel.style.display = '';
     const canDeleteInDetail = targetId === 'stream-detail' && (arc.type !== 'Arc' || parentArc);
     const canDeleteArcInDetail = targetId === 'arc-detail' && arc.type === 'Arc';
     const isStreamLike = arc.type !== 'Arc';
@@ -3419,6 +3514,9 @@ function renderDetail(arc, targetId, parentArc = null) {
       }
     }
 
+    if (targetId === 'stream-detail') injectMobileBackButton(detailPanel, 'tab-streams');
+    if (targetId === 'arc-detail') injectMobileBackButton(detailPanel, 'tab-arcs');
+
     if (targetId === 'stream-detail') scheduleDetailDockRetry(syncStreamDetailDock);
     else if (targetId === 'arc-detail') scheduleDetailDockRetry(syncArcDetailDock);
 }
@@ -3459,9 +3557,12 @@ function renderAssets() {
     moveDetailPanelToColumn('asset-detail', '#media-pane-social .campaign-detail-col');
     list.innerHTML = '';
 
-    mediaAssets.forEach((asset, index) => {
+    const hasSelectedAsset = mediaAssets.some((a) => `${a.platform}::${a.handle}` === assetListSelectedKey);
+
+    mediaAssets.forEach((asset) => {
         const card = document.createElement('div');
-        card.className = `arc-card ${index === 0 ? 'active' : ''}`;
+        const assetKey = `${asset.platform}::${asset.handle}`;
+        card.className = `arc-card ${assetListSelectedKey === assetKey ? 'active' : ''}`;
         card.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(204, 255, 0, 0.1); overflow:hidden; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.2rem;">
@@ -3476,20 +3577,39 @@ function renderAssets() {
         `;
         
         card.addEventListener('click', () => {
+            if (card.classList.contains('active')) {
+                assetListSelectedKey = null;
+                card.classList.remove('active');
+                hideDetailPanel('asset-detail', '#media-pane-social .campaign-detail-col');
+                return;
+            }
             document.querySelectorAll('#tab-media .arc-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
+            assetListSelectedKey = assetKey;
             renderAssetDetail(asset);
             scheduleDetailDockRetry(() =>
                 dockDetailUnderSpecificCard('asset-list', 'asset-detail', '#media-pane-social .campaign-detail-col', card)
             );
+            if (isMobileCardDetailModeForList('asset-list')) {
+                openMobileCardDetailScreen('tab-media', 'asset-detail', '#media-pane-social .campaign-detail-col');
+            }
         });
 
         list.appendChild(card);
     });
 
-    if (mediaAssets.length > 0) {
-        renderAssetDetail(mediaAssets[0]);
+    if (hasSelectedAsset) {
+        const selectedAsset = mediaAssets.find((a) => `${a.platform}::${a.handle}` === assetListSelectedKey);
+        if (selectedAsset) renderAssetDetail(selectedAsset);
     } else {
+        const detailPanel = document.getElementById('asset-detail');
+        if (detailPanel) {
+            detailPanel.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Select a platform to view management and creation details</div>`;
+        }
+        hideDetailPanel('asset-detail', '#media-pane-social .campaign-detail-col');
+    }
+
+    if (mediaAssets.length === 0) {
         scheduleDetailDockRetry(syncAssetDetailDock);
     }
 }
@@ -3497,6 +3617,7 @@ function renderAssets() {
 function renderAssetDetail(asset) {
     const detailPanel = document.getElementById('asset-detail');
     if (!detailPanel) return;
+    detailPanel.style.display = '';
     if (detailPanel.__mediaDetailAborter) {
       detailPanel.__mediaDetailAborter.abort();
       detailPanel.__mediaDetailAborter = null;
@@ -3583,6 +3704,7 @@ function renderAssetDetail(asset) {
       detailPanel.querySelectorAll('.yt-weekly-period, .yt-weekly-url, .yt-monthly-period, .yt-monthly-url').forEach((el) => {
         el.addEventListener('input', onChange);
       });
+      injectMobileBackButton(detailPanel, 'tab-media');
       scheduleDetailDockRetry(syncAssetDetailDock);
       return;
     }
@@ -3622,6 +3744,7 @@ function renderAssetDetail(asset) {
         </div>
       `;
       bindTikTokMediaTrendEditors(detailPanel, asset);
+      injectMobileBackButton(detailPanel, 'tab-media');
       scheduleDetailDockRetry(syncAssetDetailDock);
       return;
     }
@@ -3668,6 +3791,7 @@ function renderAssetDetail(asset) {
             </div>
         </div>
     `;
+    injectMobileBackButton(detailPanel, 'tab-media');
     scheduleDetailDockRetry(syncAssetDetailDock);
 }
 
