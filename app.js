@@ -1668,7 +1668,7 @@ function renderClippersBoard() {
   const activeSegments = activeStream && Array.isArray(activeStream.segments) ? activeStream.segments : [];
 
   board.innerHTML = `
-    <div class="campaigns-layout" style="grid-template-columns: 320px 1fr; gap: 16px;">
+    <div class="campaigns-layout clippers-mgmt-layout">
       <div class="glass-panel" style="padding: 12px;">
         <div style="font-size:0.78rem; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Streams</div>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
@@ -1726,7 +1726,7 @@ function renderClippersBoard() {
                     ${postedClips
                       .map(
                         (clip, clipIndex) => `
-                        <div class="posted-clip-row" style="display:grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr) auto auto; gap:8px; align-items:center; min-width:0;">
+                        <div class="posted-clip-row">
                           <input class="form-input" style="min-width:0;width:100%;box-sizing:border-box;" placeholder="Clip title" value="${escAttr(clip.title || '')}"
                             oninput="updatePostedClipField('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, ${segIndex}, ${clipIndex}, 'title', this.value)" />
                           <input type="url" class="form-input posted-clip-url" style="min-width:0;width:100%;box-sizing:border-box;" placeholder="Clip URL" value="${escAttr(clip.url || '')}"
@@ -1774,7 +1774,7 @@ function renderClippersBoard() {
 
   bankBoard.innerHTML = `
     <div class="glass-panel" style="padding:16px;">
-      <div style="display:grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap:8px; margin-bottom:12px;">
+      <div class="clip-bank-filters-grid">
         <input class="form-input" placeholder="Search by stream, tag, person..." value="${escAttr(clipBankFilters.text)}" oninput="setClipBankFilter('text', this.value)" />
         <select class="form-input" style="appearance:auto; background: rgba(0,0,0,0.5);" onchange="setClipBankFilter('tag', this.value)">
           <option value="">All tags</option>
@@ -2009,6 +2009,25 @@ document.addEventListener('DOMContentLoaded', () => {
   setupNetworkDetailModal();
   startAutoSave();
 
+  let detailDockResizeTimer;
+  const onDetailDockLayoutChange = () => {
+    clearTimeout(detailDockResizeTimer);
+    detailDockResizeTimer = setTimeout(() => {
+      if (!isMobileDetailDockLayout()) {
+        restoreAllDetailPanelsToColumns();
+      } else {
+        scheduleDetailDockRetry(syncStreamDetailDock);
+        scheduleDetailDockRetry(syncArcDetailDock);
+        scheduleDetailDockRetry(syncAssetDetailDock);
+        scheduleDetailDockRetry(syncGoalDetailDock);
+      }
+    }, 150);
+  };
+  window.addEventListener('resize', onDetailDockLayoutChange);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onDetailDockLayoutChange);
+  }
+
   // Load persisted state in the background; do not block UI on network.
   void (async () => {
     const loaded = await Promise.race([
@@ -2164,6 +2183,13 @@ function setupNavigation() {
                 if (pane.id === `tab-${tabId}`) {
                     pane.classList.add('active');
                 }
+            });
+
+            requestAnimationFrame(() => {
+                if (tabId === 'streams') scheduleDetailDockRetry(syncStreamDetailDock);
+                else if (tabId === 'arcs') scheduleDetailDockRetry(syncArcDetailDock);
+                else if (tabId === 'media') scheduleDetailDockRetry(syncAssetDetailDock);
+                else if (tabId === 'goals') scheduleDetailDockRetry(syncGoalDetailDock);
             });
 
             // Update Header
@@ -2538,8 +2564,100 @@ window.setStreamsBucket = function(bucket) {
     renderStreams();
 };
 
+const MOBILE_DETAIL_DOCK_MQ = '(max-width: 900px)';
+
+function isMobileDetailDockLayout() {
+    try {
+        return window.matchMedia(MOBILE_DETAIL_DOCK_MQ).matches;
+    } catch (e) {
+        const w = window.innerWidth || document.documentElement.clientWidth || 0;
+        return w <= 900;
+    }
+}
+
+function isSingleColumnCampaignLayout(list) {
+    if (!list || !list.closest) return false;
+    const layout = list.closest('.campaigns-layout');
+    if (!layout) return false;
+    const computedCols = window.getComputedStyle(layout).gridTemplateColumns || '';
+    const cols = computedCols
+        .split(' ')
+        .map((v) => v.trim())
+        .filter(Boolean);
+    return cols.length <= 1;
+}
+
+function moveDetailPanelToColumn(detailId, columnSelector) {
+    const detail = document.getElementById(detailId);
+    const col = document.querySelector(columnSelector);
+    if (detail && col) {
+        col.classList.remove('campaign-detail-col--docked-out');
+        col.appendChild(detail);
+    }
+}
+
+function dockDetailUnderActiveListCard(listId, detailId, columnSelector) {
+    const list = document.getElementById(listId);
+    const active = list ? list.querySelector('.arc-card.active') : null;
+    dockDetailUnderSpecificCard(listId, detailId, columnSelector, active);
+}
+
+function dockDetailUnderSpecificCard(listId, detailId, columnSelector, cardEl) {
+    const list = document.getElementById(listId);
+    const detail = document.getElementById(detailId);
+    const col = document.querySelector(columnSelector);
+    if (!list || !detail) return;
+    const shouldDockInline = isMobileDetailDockLayout() || isSingleColumnCampaignLayout(list);
+    if (!shouldDockInline) {
+        if (col) col.classList.remove('campaign-detail-col--docked-out');
+        if (col) col.appendChild(detail);
+        return;
+    }
+    const active = cardEl && list.contains(cardEl) ? cardEl : list.querySelector('.arc-card.active');
+    if (active && list.contains(active)) {
+        if (col) col.classList.add('campaign-detail-col--docked-out');
+        active.insertAdjacentElement('afterend', detail);
+    } else if (col) {
+        col.classList.remove('campaign-detail-col--docked-out');
+        col.appendChild(detail);
+    }
+}
+
+function scheduleDetailDockRetry(syncFn) {
+    syncFn();
+    requestAnimationFrame(() => {
+        syncFn();
+        requestAnimationFrame(() => syncFn());
+    });
+}
+
+function syncStreamDetailDock() {
+    dockDetailUnderActiveListCard('stream-list', 'stream-detail', '#tab-streams .campaign-detail-col');
+}
+
+function syncArcDetailDock() {
+    dockDetailUnderActiveListCard('arc-list', 'arc-detail', '#tab-arcs .campaign-detail-col');
+}
+
+function syncAssetDetailDock() {
+    dockDetailUnderActiveListCard('asset-list', 'asset-detail', '#media-pane-social .campaign-detail-col');
+}
+
+function syncGoalDetailDock() {
+    dockDetailUnderActiveListCard('goals-list', 'goal-detail', '#tab-goals .campaign-detail-col');
+}
+
+function restoreAllDetailPanelsToColumns() {
+    document.querySelectorAll('.campaign-detail-col--docked-out').forEach((el) => el.classList.remove('campaign-detail-col--docked-out'));
+    moveDetailPanelToColumn('stream-detail', '#tab-streams .campaign-detail-col');
+    moveDetailPanelToColumn('arc-detail', '#tab-arcs .campaign-detail-col');
+    moveDetailPanelToColumn('asset-detail', '#media-pane-social .campaign-detail-col');
+    moveDetailPanelToColumn('goal-detail', '#tab-goals .campaign-detail-col');
+}
+
 function renderStreams() {
     const list = document.getElementById('stream-list');
+    moveDetailPanelToColumn('stream-detail', '#tab-streams .campaign-detail-col');
     list.innerHTML = '';
     const streams = getUnifiedStreams();
     if (!streamsBucketUserPinned) {
@@ -2561,6 +2679,7 @@ function renderStreams() {
           `;
         }
         syncStreamsBucketButtons();
+        scheduleDetailDockRetry(syncStreamDetailDock);
         return;
     }
 
@@ -2584,6 +2703,9 @@ function renderStreams() {
             document.querySelectorAll('#tab-streams .arc-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             renderDetail(stream, 'stream-detail', stream.parentArc || null);
+            scheduleDetailDockRetry(() =>
+                dockDetailUnderSpecificCard('stream-list', 'stream-detail', '#tab-streams .campaign-detail-col', card)
+            );
         });
         list.appendChild(card);
     });
@@ -2592,6 +2714,7 @@ function renderStreams() {
         renderDetail(filtered[0], 'stream-detail');
     }
     syncStreamsBucketButtons();
+    scheduleDetailDockRetry(syncStreamDetailDock);
 }
 
 function deleteStreamRecord(stream, parentArc = null) {
@@ -2800,6 +2923,7 @@ function renderArcs() {
     const detailPanel = document.getElementById('arc-detail');
     if (!list) return;
 
+    moveDetailPanelToColumn('arc-detail', '#tab-arcs .campaign-detail-col');
     list.innerHTML = '';
     let arcs = arcsData.filter((a) => a.type === 'Arc');
     const tf = String(arcTimelineFilter.timeline || '').trim().toLowerCase();
@@ -2818,6 +2942,7 @@ function renderArcs() {
                     <p>Select an arc to view details</p>
                 </div>`;
         }
+        scheduleDetailDockRetry(syncArcDetailDock);
         return;
     }
 
@@ -2846,6 +2971,9 @@ function renderArcs() {
             document.querySelectorAll('#tab-arcs .arc-card').forEach((c) => c.classList.remove('active'));
             card.classList.add('active');
             renderDetail(arc, 'arc-detail');
+            scheduleDetailDockRetry(() =>
+                dockDetailUnderSpecificCard('arc-list', 'arc-detail', '#tab-arcs .campaign-detail-col', card)
+            );
         });
 
         list.appendChild(card);
@@ -2853,6 +2981,7 @@ function renderArcs() {
 
     const selected = arcs.find((a) => a.id === activeId) || arcs[0];
     renderDetail(selected, 'arc-detail');
+    scheduleDetailDockRetry(syncArcDetailDock);
 }
 
 function renderDetail(arc, targetId, parentArc = null) {
@@ -2887,7 +3016,7 @@ function renderDetail(arc, targetId, parentArc = null) {
                 <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Full stream VOD</div>
                 <input class="form-input${canEditStreamFields ? ' stream-detail-managed-field' : ''}" style="width:100%;" placeholder="https://... (full stream VOD URL)" value="${escAttr(arc.fullVodUrl || '')}"
                   ${canEditStreamFields ? `oninput="updateStreamClipField('${arc.id}', ${parentArc ? `'${parentArc.id}'` : 'null'}, ${Number.isInteger(arc.linkedIndex) ? arc.linkedIndex : -1}, 'fullVodUrl', this.value)"` : 'disabled'} />
-                <div style="display:grid; grid-template-columns: 1fr 200px; gap: 10px; margin-top: 10px;">
+                <div class="stream-poster-date-grid">
                     <div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Stream poster URL</div>
                         <input type="url" class="form-input${canEditStreamFields ? ' stream-detail-managed-field' : ''}" style="width:100%;" placeholder="https://... (poster URL)" value="${escAttr(arc.posterUrl || '')}"
@@ -3289,6 +3418,9 @@ function renderDetail(arc, targetId, parentArc = null) {
         });
       }
     }
+
+    if (targetId === 'stream-detail') scheduleDetailDockRetry(syncStreamDetailDock);
+    else if (targetId === 'arc-detail') scheduleDetailDockRetry(syncArcDetailDock);
 }
 
 window.renderLinkedStream = function(arcId, streamIndex, targetId) {
@@ -3324,6 +3456,7 @@ function renderNarratives() {
 function renderAssets() {
     const list = document.getElementById('asset-list');
     if (!list) return;
+    moveDetailPanelToColumn('asset-detail', '#media-pane-social .campaign-detail-col');
     list.innerHTML = '';
 
     mediaAssets.forEach((asset, index) => {
@@ -3346,6 +3479,9 @@ function renderAssets() {
             document.querySelectorAll('#tab-media .arc-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             renderAssetDetail(asset);
+            scheduleDetailDockRetry(() =>
+                dockDetailUnderSpecificCard('asset-list', 'asset-detail', '#media-pane-social .campaign-detail-col', card)
+            );
         });
 
         list.appendChild(card);
@@ -3353,6 +3489,8 @@ function renderAssets() {
 
     if (mediaAssets.length > 0) {
         renderAssetDetail(mediaAssets[0]);
+    } else {
+        scheduleDetailDockRetry(syncAssetDetailDock);
     }
 }
 
@@ -3398,7 +3536,7 @@ function renderAssetDetail(asset) {
                       ${weeklyLinks
                         .map(
                           (row, idx) => `
-                        <div style="display:grid; grid-template-columns: 1.2fr 2fr; gap:8px; align-items:center;">
+                        <div class="yt-recap-row">
                           <input class="form-input yt-weekly-period" data-index="${idx}" value="${String(row.period).replace(/"/g, '&quot;')}" />
                           <input class="form-input yt-weekly-url" data-index="${idx}" placeholder="https://..." value="${String(row.url || '').replace(/"/g, '&quot;')}" />
                         </div>`
@@ -3415,7 +3553,7 @@ function renderAssetDetail(asset) {
                       ${monthlyLinks
                         .map(
                           (row, idx) => `
-                        <div style="display:grid; grid-template-columns: 1.2fr 2fr; gap:8px; align-items:center;">
+                        <div class="yt-recap-row">
                           <input class="form-input yt-monthly-period" data-index="${idx}" value="${String(row.period).replace(/"/g, '&quot;')}" />
                           <input class="form-input yt-monthly-url" data-index="${idx}" placeholder="https://..." value="${String(row.url || '').replace(/"/g, '&quot;')}" />
                         </div>`
@@ -3445,6 +3583,7 @@ function renderAssetDetail(asset) {
       detailPanel.querySelectorAll('.yt-weekly-period, .yt-weekly-url, .yt-monthly-period, .yt-monthly-url').forEach((el) => {
         el.addEventListener('input', onChange);
       });
+      scheduleDetailDockRetry(syncAssetDetailDock);
       return;
     }
 
@@ -3483,6 +3622,7 @@ function renderAssetDetail(asset) {
         </div>
       `;
       bindTikTokMediaTrendEditors(detailPanel, asset);
+      scheduleDetailDockRetry(syncAssetDetailDock);
       return;
     }
 
@@ -3528,12 +3668,14 @@ function renderAssetDetail(asset) {
             </div>
         </div>
     `;
+    scheduleDetailDockRetry(syncAssetDetailDock);
 }
 
 // Render Goals
 window.renderGoals = function() {
     const list = document.getElementById('goals-list');
     if (!list) return;
+    moveDetailPanelToColumn('goal-detail', '#tab-goals .campaign-detail-col');
     list.innerHTML = '';
 
     const categories = [...new Set(goalsData.map(g => g.category))];
@@ -3567,6 +3709,8 @@ window.renderGoals = function() {
 
     if (categories.length > 0) {
         renderCategoryDetail(categories[0]);
+    } else {
+        scheduleDetailDockRetry(syncGoalDetailDock);
     }
 }
 
@@ -3650,6 +3794,7 @@ window.renderCategoryDetail = function(category) {
 
     html += `</div>`;
     detailPanel.innerHTML = html;
+    scheduleDetailDockRetry(syncGoalDetailDock);
 }
 
 window.toggleGoalAccordion = function(bodyId, headerElement) {

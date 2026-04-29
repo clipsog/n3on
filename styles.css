@@ -498,6 +498,38 @@ h1, h2, h3, h4, h5, h6 {
     height: 100%;
 }
 
+/* Clippers management: avoid inline grid (overrides mobile). Stack on small screens. */
+.campaigns-layout.clippers-mgmt-layout {
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: 16px;
+    height: auto;
+    min-height: 0;
+}
+
+.stream-poster-date-grid {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 10px;
+    margin-top: 10px;
+    min-width: 0;
+}
+
+.clip-bank-filters-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+    min-width: 0;
+}
+
+.posted-clip-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+}
+
 #tab-streams.tab-pane.active {
     display: flex;
     flex-direction: column;
@@ -594,6 +626,20 @@ h1, h2, h3, h4, h5, h6 {
 .arc-timeline-filters .arc-timeline-btn {
     padding: 8px 12px;
     font-size: 0.8rem;
+}
+
+.yt-recap-row {
+    display: grid;
+    grid-template-columns: 1.2fr 2fr;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+}
+
+.yt-recap-row .form-input {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .streams-bucket-btn.streams-bucket-btn--active {
@@ -1637,6 +1683,93 @@ h1, h2, h3, h4, h5, h6 {
         height: auto !important;
         min-height: 240px;
         overflow: visible;
+    }
+
+    .yt-recap-row {
+        grid-template-columns: 1fr;
+    }
+
+    #stream-list > #stream-detail,
+    #arc-list > #arc-detail,
+    #asset-list > #asset-detail,
+    #goals-list > #goal-detail {
+        margin-top: 12px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    #stream-list > #stream-detail.detail-panel,
+    #arc-list > #arc-detail.detail-panel,
+    #asset-list > #asset-detail.detail-panel {
+        padding: 16px 14px;
+    }
+
+    .campaign-detail-col.campaign-detail-col--docked-out {
+        display: none !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .campaigns-layout.clippers-mgmt-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .stream-poster-date-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clip-bank-filters-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .posted-clip-row {
+        grid-template-columns: 1fr;
+    }
+
+    .posted-clip-row .btn {
+        justify-self: start;
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .clippers-header {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .arc-card:hover,
+    .arc-card.active {
+        transform: none;
+    }
+
+    #tab-media .campaigns-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: 0;
+        max-height: none;
+    }
+
+    #tab-media #media-pane-social .campaign-list-col,
+    #tab-media #media-pane-social .campaign-detail-col {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    #tab-media #asset-list {
+        max-height: none !important;
+        overflow-y: visible !important;
+    }
+
+    .clip-bank-scroll {
+        max-height: none !important;
     }
 
     .calendar-controls {
