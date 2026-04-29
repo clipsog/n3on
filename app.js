@@ -3191,15 +3191,15 @@ function renderDetail(arc, targetId, parentArc = null) {
             ${parentArc ? `<button class="btn btn-outline btn-sm" style="margin-bottom: 16px; display: inline-flex; align-items: center; gap: 8px;" onclick="renderDetail(arcsData.find(a => a.id === '${parentArc.id}'), '${targetId}')"><i class="fa-solid fa-arrow-left"></i> Back to ${parentArc.title}</button>` : ''}
             <div class="detail-header-actions">
                 <div class="detail-header-actions-right">
+                    <button type="button" class="btn btn-outline btn-sm detail-edit-toggle detail-corner-btn" onclick="toggleEditMode(this)">
+                        <i class="fa-solid fa-pen"></i> Edit Info
+                    </button>
                 ${canDeleteArcInDetail ? `<button type="button" id="delete-detail-arc-btn" class="btn btn-outline btn-sm detail-corner-btn detail-corner-btn--danger">
                     <i class="fa-solid fa-trash"></i> Delete Arc
                 </button>` : ''}
                 ${canDeleteInDetail ? `<button type="button" id="delete-detail-stream-btn" class="btn btn-outline btn-sm detail-corner-btn detail-corner-btn--danger">
                     <i class="fa-solid fa-trash"></i> Delete
                 </button>` : ''}
-                    <button type="button" class="btn btn-outline btn-sm detail-edit-toggle detail-corner-btn" onclick="toggleEditMode(this)">
-                        <i class="fa-solid fa-pen"></i> Edit Info
-                    </button>
                 </div>
             </div>
             <h2>${arc.title}</h2>
