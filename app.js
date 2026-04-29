@@ -1700,8 +1700,12 @@ function renderClippersBoard() {
                 <h4 style="margin:0; font-size:1rem;">${escAttr(activeStream.title)}</h4>
                 ${activeStream.parentArc ? `<span style="color:var(--text-muted); font-size:0.82rem;">From arc: ${escAttr(activeStream.parentArc.title)}</span>` : ''}
               </div>
-              <input class="form-input" style="width:100%; margin-bottom:10px;" placeholder="Full stream VOD URL" value="${escAttr(activeStream.fullVodUrl || '')}"
-                oninput="updateStreamClipField('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, 'fullVodUrl', this.value)" />
+              <div style="display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:center; margin-bottom:10px;">
+                <input class="form-input stream-full-vod-url" style="width:100%;" placeholder="Full stream VOD URL" value="${escAttr(activeStream.fullVodUrl || '')}"
+                  oninput="updateStreamClipField('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, 'fullVodUrl', this.value)" />
+                <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;" title="Play in app" onclick="void window.openMediaEmbedPreview(this.closest('div').querySelector('.stream-full-vod-url').value)"><i class="fa-solid fa-play"></i></button>
+                <a href="${escAttr(activeStream.fullVodUrl || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="if(!(this.closest('div').querySelector('.stream-full-vod-url').value||'').trim()){event.preventDefault();return;} this.href=this.closest('div').querySelector('.stream-full-vod-url').value.trim();"><i class="fa-solid fa-up-right-from-square"></i></a>
+              </div>
             `
             : `<div style="font-size:0.9rem; color:var(--text-muted); border:1px dashed var(--border-color); border-radius:8px; padding:10px; margin-bottom:10px;">No streams in this bucket yet.</div>`
         }
@@ -1714,8 +1718,12 @@ function renderClippersBoard() {
               return `
                 <div style="border:1px solid var(--border-color); border-radius:8px; padding:10px; background:rgba(255,255,255,0.02); min-width:0;">
                   <div style="font-size:0.82rem; color:var(--primary); margin-bottom:8px;">Segment ${segIndex + 1}: ${escAttr(seg.title || 'Untitled')}</div>
-                  <input class="form-input" style="width:100%; margin-bottom:8px;" placeholder="Segment VOD URL" value="${escAttr(vod)}"
-                    oninput="updateSegmentClipperFields('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, ${segIndex}, 'clipVodUrl', this.value)" />
+                  <div style="display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:center; margin-bottom:8px;">
+                    <input class="form-input segment-vod-url" style="width:100%;" placeholder="Segment VOD URL" value="${escAttr(vod)}"
+                      oninput="updateSegmentClipperFields('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, ${segIndex}, 'clipVodUrl', this.value)" />
+                    <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;" title="Play in app" onclick="void window.openMediaEmbedPreview(this.closest('div').querySelector('.segment-vod-url').value)"><i class="fa-solid fa-play"></i></button>
+                    <a href="${escAttr(vod || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="if(!(this.closest('div').querySelector('.segment-vod-url').value||'').trim()){event.preventDefault();return;} this.href=this.closest('div').querySelector('.segment-vod-url').value.trim();"><i class="fa-solid fa-up-right-from-square"></i></a>
+                  </div>
                   <textarea class="form-input" style="width:100%; min-height:72px; resize:vertical; margin-bottom:8px;" placeholder="Desired angle for clippers"
                     oninput="updateSegmentClipperFields('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, ${segIndex}, 'clipDesiredAngle', this.value)">${escAttr(angle)}</textarea>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -1736,6 +1744,7 @@ function renderClippersBoard() {
                           <input class="form-input" style="min-width:0;width:100%;box-sizing:border-box;" placeholder="People (Iggy, Von Miller)" value="${escAttr(Array.isArray(clip.people) ? clip.people.join(', ') : (clip.people || ''))}"
                             oninput="updatePostedClipField('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, ${segIndex}, ${clipIndex}, 'people', this.value)" />
                           <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;" title="Play in app" onclick="void window.openMediaEmbedPreview(this.closest('.posted-clip-row').querySelector('.posted-clip-url').value)"><i class="fa-solid fa-play"></i></button>
+                          <a href="${escAttr(clip.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" style="flex-shrink:0;" title="Open link" onclick="if(!(this.closest('.posted-clip-row').querySelector('.posted-clip-url').value||'').trim()){event.preventDefault();return;} this.href=this.closest('.posted-clip-row').querySelector('.posted-clip-url').value.trim();"><i class="fa-solid fa-up-right-from-square"></i></a>
                           <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="removePostedClip('${activeStream.id}', ${activeStream.parentArc ? `'${activeStream.parentArc.id}'` : 'null'}, ${Number.isInteger(activeStream.linkedIndex) ? activeStream.linkedIndex : -1}, ${segIndex}, ${clipIndex})"><i class="fa-solid fa-xmark"></i></button>
                         </div>`
                       )
