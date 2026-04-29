@@ -4605,7 +4605,7 @@ function handleCreateDraftSubmit(modal) {
     if (driver) draft.driver = driver;
     if (type === 'Collab') {
       const collabWith = getFieldValue('.field-collab-with');
-      if (collabWith && collabWith !== 'Select from network...') draft.collabWith = collabWith;
+      if (collabWith) draft.collabWith = collabWith;
     }
     arcsData.push(draft);
 
@@ -4778,6 +4778,122 @@ window.openSegmentBankModal = function(triggerEl) {
     modal.classList.add('active');
 };
 
+function walkReachOutContactNames(node, outSet) {
+  if (node == null) return;
+  if (typeof node === 'string') {
+    const t = node.trim();
+    if (t) outSet.add(t);
+    return;
+  }
+  if (Array.isArray(node)) {
+    node.forEach((x) => walkReachOutContactNames(x, outSet));
+    return;
+  }
+  if (typeof node === 'object') {
+    Object.keys(node).forEach((k) => {
+      if (k === '__version') return;
+      walkReachOutContactNames(node[k], outSet);
+    });
+  }
+}
+
+function getCollabContactNameList() {
+  const set = new Set();
+  if (Array.isArray(networkData)) {
+    networkData.forEach((p) => {
+      const n = String(p?.name || '').trim();
+      if (n) set.add(n);
+    });
+  }
+  if (reachOutContactsData && typeof reachOutContactsData === 'object') {
+    walkReachOutContactNames(reachOutContactsData, set);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+function filterCollabContactNames(query, limit = 20) {
+  const q = String(query || '').trim().toLowerCase();
+  const all = getCollabContactNameList();
+  if (!q) return all.slice(0, limit);
+  return all.filter((name) => name.toLowerCase().includes(q)).slice(0, limit);
+}
+
+function setupCollabWithAutocomplete(modal) {
+  const input = modal?.querySelector('.field-collab-with');
+  const wrap = input?.closest('.collab-with-wrap');
+  const listEl = wrap?.querySelector('.field-collab-suggestions');
+  if (!input || !listEl || !wrap) return;
+
+  if (wrap._collabDocAbort) {
+    wrap._collabDocAbort.abort();
+  }
+  const ac = new AbortController();
+  wrap._collabDocAbort = ac;
+  const { signal } = ac;
+
+  const hide = () => {
+    listEl.style.display = 'none';
+    listEl.innerHTML = '';
+  };
+
+  const show = (names) => {
+    if (!names.length) {
+      hide();
+      return;
+    }
+    listEl.innerHTML = names
+      .map(
+        (name) =>
+          `<button type="button" class="field-collab-suggestion-btn" data-name="${escAttr(name)}" style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--text-main);cursor:pointer;font:inherit;border-bottom:1px solid var(--border-color);">${escAttr(name)}</button>`
+      )
+      .join('');
+    listEl.style.display = 'block';
+  };
+
+  const renderSuggestions = () => {
+    show(filterCollabContactNames(input.value));
+  };
+
+  input.addEventListener('input', renderSuggestions, { signal });
+  input.addEventListener('focus', renderSuggestions, { signal });
+  input.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key === 'Escape') hide();
+    },
+    { signal }
+  );
+
+  listEl.addEventListener(
+    'mousedown',
+    (e) => {
+      e.preventDefault();
+    },
+    { signal }
+  );
+
+  listEl.addEventListener(
+    'click',
+    (e) => {
+      const btn = e.target.closest('[data-name]');
+      if (!btn) return;
+      const name = btn.getAttribute('data-name') || '';
+      input.value = name;
+      hide();
+      input.focus();
+    },
+    { signal }
+  );
+
+  document.addEventListener(
+    'click',
+    (e) => {
+      if (!wrap.contains(e.target)) hide();
+    },
+    { signal }
+  );
+}
+
 function setupModal() {
     const modal = document.getElementById('new-item-modal');
     const closeBtn = document.getElementById('close-modal-btn');
@@ -4786,6 +4902,7 @@ function setupModal() {
     const renderTypeTemplate = (type) => {
         if (templates[type]) {
             dynamicContainer.innerHTML = templates[type];
+            if (type === 'Collab') setupCollabWithAutocomplete(modal);
         }
     };
 
@@ -4839,14 +4956,10 @@ function setupModal() {
             </div>
         `,
         'Collab': `
-            <div class="form-group" style="margin-bottom: 16px;">
+            <div class="form-group collab-with-wrap" style="margin-bottom: 16px; position: relative;">
                 <label>Collab With (Network)</label>
-                <select class="form-input field-collab-with" style="width: 100%; margin-top: 8px; appearance: auto; background: rgba(0,0,0,0.5);">
-                    <option>Select from network...</option>
-                    <option>IShowSpeed</option>
-                    <option>LaMelo Ball</option>
-                    <option>Central Cee</option>
-                </select>
+                <input type="text" class="form-input field-collab-with" autocomplete="off" placeholder="Type to search your contacts…" style="width: 100%; margin-top: 8px;">
+                <div class="field-collab-suggestions" style="display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 60; margin-top: 4px; max-height: 240px; overflow-y: auto; background: rgba(18, 18, 22, 0.98); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: 0 10px 28px rgba(0,0,0,0.45);"></div>
             </div>
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div>
