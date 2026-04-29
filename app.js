@@ -1013,6 +1013,26 @@ function setupCreativeDirectorTabs() {
   });
 }
 
+function setupAboutMeSectionTabs() {
+  const pane = document.getElementById('creative-director-pane-about-me');
+  if (!pane) return;
+  const buttons = pane.querySelectorAll('[data-about-me-section]');
+  const sections = pane.querySelectorAll('.about-me-section-pane');
+  if (!buttons.length || !sections.length) return;
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-about-me-section');
+      buttons.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      sections.forEach((section) => {
+        const isMatch = section.id === `about-me-section-${target}`;
+        section.classList.toggle('active', isMatch);
+      });
+    });
+  });
+}
+
 let __activeNetworkDetailIndex = -1;
 
 function closeNetworkDetailModal() {
@@ -2011,6 +2031,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupClippersSubtabs();
   setupNetworkSubtabs();
   setupCreativeDirectorTabs();
+  setupAboutMeSectionTabs();
   setupModal();
   setupTikTokTrendPreviewModal();
   setupSegmentBankModal();

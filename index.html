@@ -511,8 +511,13 @@
 
                 <div id="creative-director-pane-about-me" class="creative-director-pane active">
                     <h4 style="color: var(--primary); margin-bottom: 10px; font-size: 1rem; text-transform: uppercase;">About Me</h4>
-                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; color: var(--text-muted);">
-                        <div>
+                    <div class="about-me-section-tabs">
+                        <button type="button" class="type-btn active" data-about-me-section="personally">Personally</button>
+                        <button type="button" class="type-btn" data-about-me-section="professionally">Professionally</button>
+                        <button type="button" class="type-btn" data-about-me-section="motive">Motive</button>
+                    </div>
+                    <div class="about-me-sections-grid" style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; color: var(--text-muted);">
+                        <div class="about-me-section-pane active" id="about-me-section-personally">
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Personally</div>
                             <ul style="margin: 0; padding-left: 18px; display:flex; flex-direction:column; gap:4px;">
                                 <li>I do not smoke or drink.</li>
@@ -528,7 +533,7 @@
                                 <li>Loyal.</li>
                             </ul>
                         </div>
-                        <div>
+                        <div class="about-me-section-pane" id="about-me-section-professionally">
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Professionally</div>
                             <ul style="margin: 0; padding-left: 18px; display:flex; flex-direction:column; gap:4px;">
                                 <li>Organized.</li>
@@ -539,9 +544,15 @@
                                 <li>Discreet.</li>
                                 <li>Innovative.</li>
                                 <li>Persistent.</li>
+                                <li>Team player.</li>
+                                <li>Long-term thinker.</li>
+                                <li>Fast.</li>
+                                <li>Quality oriented.</li>
+                                <li>Attention to details.</li>
+                                <li>Able to handle stress.</li>
                             </ul>
                         </div>
-                        <div>
+                        <div class="about-me-section-pane" id="about-me-section-motive">
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Motive</div>
                             <ul style="margin: 0; padding-left: 18px; display:flex; flex-direction:column; gap:4px;">
                                 <li>Be able to do meaningful work every day.</li>
@@ -558,6 +569,10 @@
                 <div id="creative-director-pane-what-i-do" class="creative-director-pane" style="display:none;">
                     <h4 style="color: var(--primary); margin-bottom: 14px; font-size: 1.1rem; text-transform: uppercase;">What I will do for the team</h4>
                     <div style="display: flex; flex-direction: column; gap: 14px; color: var(--text-muted);">
+                        <div>
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Whatever the team needs</div>
+                            <div>Anything that the teams need for success.</div>
+                        </div>
                         <div>
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Weekly & Monthly Recaps</div>
                             <div>Run recap systems and publish short- and long-form highlights across YouTube and X, because people forget that they forget, so key moments stay visible and reusable when we need them.</div>

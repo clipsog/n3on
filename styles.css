@@ -530,6 +530,17 @@ h1, h2, h3, h4, h5, h6 {
     min-width: 0;
 }
 
+.about-me-section-tabs {
+    display: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.about-me-section-pane:not(.active) {
+    display: none;
+}
+
 #tab-streams.tab-pane.active {
     display: flex;
     flex-direction: column;
@@ -1793,6 +1804,14 @@ h1, h2, h3, h4, h5, h6 {
 
     .clip-bank-scroll {
         max-height: none !important;
+    }
+
+    .about-me-section-tabs {
+        display: grid;
+    }
+
+    .about-me-sections-grid {
+        grid-template-columns: 1fr !important;
     }
 
     .calendar-controls {
