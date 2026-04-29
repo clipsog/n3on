@@ -1470,27 +1470,27 @@ h1, h2, h3, h4, h5, h6 {
     }
 
     .nav-menu {
-        flex-direction: row;
-        flex-wrap: nowrap;
-        overflow-x: auto;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 6px;
-        flex: 1 1 200px;
+        flex: 1 1 100%;
         min-width: 0;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 2px;
     }
 
     .nav-item {
-        padding: 10px 12px;
-        font-size: 0.82rem;
-        flex-shrink: 0;
+        padding: 9px 8px;
+        font-size: 0.76rem;
+        gap: 8px;
+        justify-content: center;
     }
 
     .nav-item span {
-        max-width: 36vw;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: none;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        text-align: center;
+        line-height: 1.15;
     }
 
     .user-profile {
