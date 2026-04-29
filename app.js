@@ -1267,6 +1267,43 @@ window.deleteGoalById = function(goalId) {
   scheduleSaveAppStateToDb();
 };
 
+window.editGoalCategory = function(category) {
+  const cat = String(category || '').trim();
+  if (!cat) return;
+  const inCategory = goalsData.filter((g) => String(g.category || '').trim() === cat);
+  if (!inCategory.length) return;
+  openQuickFormModal({
+    title: 'Edit Goal Category',
+    submitLabel: 'Save Category',
+    fields: [{ name: 'category', label: 'Category Name', type: 'text', value: cat }],
+    onSubmit: (values) => {
+      const next = String(values.category || '').trim();
+      if (!next) return false;
+      inCategory.forEach((g) => {
+        g.category = next;
+      });
+      goalListSelectedCategory = next;
+      renderGoals();
+      renderCategoryDetail(next);
+      scheduleSaveAppStateToDb();
+      return true;
+    },
+  });
+};
+
+window.deleteGoalCategory = function(category) {
+  const cat = String(category || '').trim();
+  if (!cat) return;
+  const count = goalsData.filter((g) => String(g.category || '').trim() === cat).length;
+  if (!count) return;
+  const ok = window.confirm(`Delete category "${cat}" and its ${count} goal(s)?`);
+  if (!ok) return;
+  goalsData = goalsData.filter((g) => String(g.category || '').trim() !== cat);
+  if (goalListSelectedCategory === cat) goalListSelectedCategory = null;
+  renderGoals();
+  scheduleSaveAppStateToDb();
+};
+
 function createNetworkPersonViaForm() {
   openQuickFormModal({
     title: 'Add Network Person',
@@ -3984,7 +4021,11 @@ window.renderGoals = function() {
         
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h4 class="arc-title" style="margin: 0; font-size: 1.1rem; text-transform: uppercase;">${category}</h4>
+                <h4 class="arc-title" style="margin: 0; font-size: 1.1rem; text-transform: uppercase; min-width:0;">${category}</h4>
+                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;" onclick="event.stopPropagation()">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="editGoalCategory('${escAttr(category)}')"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.45); color:#f87171;" onclick="deleteGoalCategory('${escAttr(category)}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
             </div>
             <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 12px; display: flex; align-items: center; gap: 6px;">
                 <i class="fa-solid fa-layer-group"></i> ${categoryGoals.length} Subgoals <span style="opacity: 0.5;">(${inProgress} Active)</span>
