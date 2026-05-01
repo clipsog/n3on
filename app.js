@@ -3360,9 +3360,8 @@ function renderDetail(arc, targetId, parentArc = null) {
         `;
     }
 
-    if (arc.segments) {
-        if (arc.collabWith) {
-            html += `
+    if (arc.collabWith) {
+        html += `
                 <div class="info-group" style="grid-column: 1 / -1; background: rgba(255, 255, 255, 0.05);">
                     <div class="info-label"><i class="fa-solid fa-users"></i> Collab Details</div>
                     <div class="info-content">
@@ -3370,8 +3369,9 @@ function renderDetail(arc, targetId, parentArc = null) {
                     </div>
                 </div>
             `;
-        }
+    }
 
+    if (arc.segments) {
         if (arc.security || arc.driver || arc.logistics) {
             html += `
                 <div class="info-group" style="grid-column: 1 / -1;">
@@ -4567,7 +4567,7 @@ function handleCreateDraftSubmit(modal) {
         };
       })
       .filter(Boolean);
-    arcsData.push({
+    const newArc = {
       id: newId,
       title,
       status: 'planning',
@@ -4588,7 +4588,10 @@ function handleCreateDraftSubmit(modal) {
       trailerPostDate: '',
       budget: getFieldValue('#arc-budget'),
       linkedStreams,
-    });
+    };
+    const arcCollab = readCollabChipsFromModal(modal);
+    if (arcCollab !== undefined) newArc.collabWith = arcCollab;
+    arcsData.push(newArc);
   } else {
     const draft = {
       id: newId,
@@ -4603,21 +4606,8 @@ function handleCreateDraftSubmit(modal) {
     const driver = getFieldValue('.field-driver');
     if (security) draft.security = security;
     if (driver) draft.driver = driver;
-    if (type === 'Collab') {
-      const chipNames = [...modal.querySelectorAll('.field-collab-chip')]
-        .map((el) => String(el.getAttribute('data-name') || '').trim())
-        .filter(Boolean);
-      const seen = new Set();
-      const uniq = [];
-      chipNames.forEach((n) => {
-        const k = n.toLowerCase();
-        if (seen.has(k)) return;
-        seen.add(k);
-        uniq.push(n);
-      });
-      if (uniq.length === 1) draft.collabWith = uniq[0];
-      else if (uniq.length > 1) draft.collabWith = uniq;
-    }
+    const streamCollab = readCollabChipsFromModal(modal);
+    if (streamCollab !== undefined) draft.collabWith = streamCollab;
     arcsData.push(draft);
 
     const dateSource = dateEl?.value || '';
@@ -4850,6 +4840,34 @@ function collabWithFieldAsSearchBlob(collabWith) {
   return String(collabWith || '').toLowerCase();
 }
 
+function readCollabChipsFromModal(modal) {
+  if (!modal) return undefined;
+  const chipNames = [...modal.querySelectorAll('.field-collab-chip')]
+    .map((el) => String(el.getAttribute('data-name') || '').trim())
+    .filter(Boolean);
+  const seen = new Set();
+  const uniq = [];
+  chipNames.forEach((n) => {
+    const k = n.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    uniq.push(n);
+  });
+  if (!uniq.length) return undefined;
+  if (uniq.length === 1) return uniq[0];
+  return uniq;
+}
+
+function getNewItemCollabWithFieldHtml() {
+  return `
+            <div class="form-group collab-with-wrap" style="margin-bottom: 16px; position: relative;">
+                <label>Collab With (Network)</label>
+                <div class="field-collab-chips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; margin-bottom: 6px; min-height: 0;"></div>
+                <input type="text" class="form-input field-collab-search" autocomplete="off" placeholder="Search contacts, click a name to add…" style="width: 100%;">
+                <div class="field-collab-suggestions" style="display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 60; margin-top: 4px; max-height: 240px; overflow-y: auto; background: rgba(18, 18, 22, 0.98); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: 0 10px 28px rgba(0,0,0,0.45);"></div>
+            </div>`;
+}
+
 function setupCollabWithAutocomplete(modal) {
   const searchInput = modal?.querySelector('.field-collab-search');
   const wrap = searchInput?.closest('.collab-with-wrap');
@@ -4981,7 +4999,7 @@ function setupModal() {
     const renderTypeTemplate = (type) => {
         if (templates[type]) {
             dynamicContainer.innerHTML = templates[type];
-            if (type === 'Collab') setupCollabWithAutocomplete(modal);
+            if (modal.querySelector('.collab-with-wrap')) setupCollabWithAutocomplete(modal);
         }
     };
 
@@ -5003,6 +5021,7 @@ function setupModal() {
 
     const templates = {
         'Desktop': `
+            ${getNewItemCollabWithFieldHtml()}
             <div class="segments-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <label>Segments</label>
@@ -5014,6 +5033,7 @@ function setupModal() {
             </div>
         `,
         'IRL': `
+            ${getNewItemCollabWithFieldHtml()}
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div>
                     <label>Assign Security</label>
@@ -5035,12 +5055,7 @@ function setupModal() {
             </div>
         `,
         'Collab': `
-            <div class="form-group collab-with-wrap" style="margin-bottom: 16px; position: relative;">
-                <label>Collab With (Network)</label>
-                <div class="field-collab-chips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; margin-bottom: 6px; min-height: 0;"></div>
-                <input type="text" class="form-input field-collab-search" autocomplete="off" placeholder="Search contacts, click a name to add…" style="width: 100%;">
-                <div class="field-collab-suggestions" style="display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 60; margin-top: 4px; max-height: 240px; overflow-y: auto; background: rgba(18, 18, 22, 0.98); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: 0 10px 28px rgba(0,0,0,0.45);"></div>
-            </div>
+            ${getNewItemCollabWithFieldHtml()}
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div>
                     <label>Assign Security</label>
@@ -5066,6 +5081,7 @@ function setupModal() {
                 <label>Budget</label>
                 <input type="text" id="arc-budget" class="form-input" placeholder="e.g. $50,000 (Production)" style="width: 100%; margin-top: 8px;">
             </div>
+            ${getNewItemCollabWithFieldHtml()}
             <div class="form-group" style="margin-bottom: 16px;">
                 <label>Overall Narrative</label>
                 <textarea id="arc-narrative" class="form-input" placeholder="Enter the grand vision for this arc..." style="width: 100%; margin-top: 8px; min-height: 60px; resize: vertical; font-family: inherit;"></textarea>
